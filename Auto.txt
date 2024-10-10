@@ -1,0 +1,104 @@
+git clone https://github.com/YOUR_USERNAME/telegram-movie-autofilter-bot.git
+
+telegram-movie-autofilter-bot/
+│
+├── main.py
+├── config.py
+├── database.py
+├── filters.py
+├── buttons.py
+├── log_channel.py
+├── requirements.txt
+└── README.md
+
+pyrogram==2.0.30
+aiogram==2.15
+pymongo==3.11.4  # For database (MongoDB)
+
+from pyrogram import Client, filters
+from config import API_ID, API_HASH, BOT_TOKEN, AUTH_CHANNEL
+from database import get_movie
+from buttons import get_movie_buttons
+from log_channel import log_message
+
+bot = Client(
+    "MovieFilterBot",
+    api_id=API_ID,
+    api_hash=API_HASH,
+    bot_token=BOT_TOKEN
+)
+
+@bot.on_message(filters.command("start"))
+async def start(client, message):
+    await message.reply("Hello! I'm a movie filter bot. Search for movies by name!")
+
+@bot.on_message(filters.text)
+async def filter_movies(client, message):
+    movie_name = message.text
+    movie = get_movie(movie_name)
+    
+    if movie:
+        await message.reply_text(f"Found: {movie['name']}", reply_markup=get_movie_buttons(movie))
+        await log_message(client, movie['name'], message)
+    else:
+        await message.reply("Movie not found.")
+
+if __name__ == "__main__":
+    bot.run()
+    
+    API_ID = 123456
+API_HASH = "your_api_hash"
+BOT_TOKEN = "your_bot_token"
+LOG_CHANNEL = -100123456789
+AUTH_CHANNEL = -100987654321
+
+import pymongo
+from config import MONGO_URI
+
+client = pymongo.MongoClient(MONGO_URI)
+db = client["movie_database"]
+collection = db["movies"]
+
+def get_movie(name):
+    return collection.find_one({"name": {"$regex": name, "$options": "i"}})
+    
+    from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+
+def get_movie_buttons(movie):
+    buttons = [
+        [InlineKeyboardButton("Year", callback_data=f"year_{movie['year']}")],
+        [InlineKeyboardButton("Language", callback_data=f"language_{movie['language']}")],
+        [InlineKeyboardButton("Download", url=movie['link'])]
+    ]
+    return InlineKeyboardMarkup(buttons)
+    
+    from config import LOG_CHANNEL
+
+async def log_message(client, movie_name, message):
+    await client.send_message(
+        LOG_CHANNEL,
+        f"User {message.from_user.mention} searched for {movie_name}"
+    )
+    
+    # Telegram Movie Auto Filter Bot
+
+This is a Telegram bot that filters movies from a database and allows users to search for movies by name. The bot displays the year, language, and download link for each movie.
+
+## Features
+- Search movies by name.
+- Year, Language, and Download buttons.
+- Log channel to track searches.
+- Authorization channel to control access.
+
+## Setup
+1. Clone the repository.
+2. Install requirements with `pip install -r requirements.txt`.
+3. Set up your environment variables in `config.py`.
+4. Run the bot with `python main.py`.
+
+git add .
+
+git commit -m "Initial commit with Telegram movie filter bot"
+
+git push origin main
+
